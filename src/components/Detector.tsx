@@ -14,6 +14,8 @@ export function Detector() {
   const [fileName, setFileName] = useState<string>("");
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [famImage, setFamImage] = useState<string | null>(null);
+  const [gradcamImage, setGradcamImage] = useState<string | null>(null);  
   
   // --- STATE BARU UNTUK FITUR FEEDBACK ---
   const [showModal, setShowModal] = useState(false);
@@ -27,6 +29,8 @@ export function Detector() {
     
     // Reset semua state saat foto baru diunggah
     setResult(null);
+    setFamImage(null);     // Ditambahkan: Reset gambar FAM lama
+    setGradcamImage(null); // Ditambahkan: Reset gambar Grad-CAM lama
     setShowModal(false);
     setFeedbackSent(false);
     setScanning(true);
@@ -44,6 +48,11 @@ export function Detector() {
       const data = await response.json();
       const probFake = data.fake_probability;
       const probReal = data.real_probability;
+
+      // Menangkap string Base64 gambar dari API
+      // (Mendukung key 'fam_base64' atau 'fam' tergantung output teman Anda)
+      if (data.fam_base64 || data.fam) setFamImage(data.fam_base64 || data.fam);
+      if (data.gradcam_base64 || data.grad_cam) setGradcamImage(data.gradcam_base64 || data.grad_cam);
 
       // LOGIKA SISTEM 3 WARNA
       let currentVerdict: "authentic" | "suspicious" | "manipulated" = "authentic";
@@ -70,11 +79,7 @@ export function Detector() {
   // Fungsi untuk mengirim laporan (Saat ini simulasi)
   const handleFeedbackSubmit = async () => {
     setIsSubmittingFeedback(true);
-    
-    // Nanti, kode fetch API khusus komplain (POST ke database Abdila) ditaruh di sini
-    // Untuk sekarang, kita buat simulasi loading 1.5 detik
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
     setIsSubmittingFeedback(false);
     setShowModal(false);
     setFeedbackSent(true);
@@ -101,7 +106,6 @@ export function Detector() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}
         >
           <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            
             {/* Modal Header */}
             <div className="p-4 border-b border-amber-500/20 bg-amber-500/10 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full border-2 border-amber-500 text-amber-500 flex items-center justify-center font-bold">!</div>
@@ -154,7 +158,6 @@ export function Detector() {
                 </button>
               </div>
             </div>
-
           </div>
         </div>
       )}
@@ -216,7 +219,7 @@ export function Detector() {
 
           {result && !scanning && (
             <div className="flex-1 flex flex-col justify-center">
-              <div className={`rounded-xl p-5 mb-8 border ${theme.border} ${theme.bg} transition-colors duration-500`}>
+              <div className={`rounded-xl p-5 mb-6 border ${theme.border} ${theme.bg} transition-colors duration-500`}>
                 <div className="flex items-center gap-4">
                   {theme.icon}
                   <div>
@@ -240,7 +243,7 @@ export function Detector() {
                 )}
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-5 mb-6">
                 <div>
                   <div className="flex justify-between text-xs font-mono mb-2">
                     <span className="text-muted-foreground">Probabilitas Manipulasi (Fake)</span>
@@ -262,10 +265,35 @@ export function Detector() {
                 </div>
               </div>
 
+              {/* --- PANEL BARU: VISUALISASI XAI (FAM & GRAD-CAM) --- */}
+              {famImage && gradcamImage && (
+                <div className="pt-5 border-t border-border/50">
+                  <h4 className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase mb-3 text-center">Analisis Visual AI (XAI)</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex flex-col items-center bg-card/50 p-2 rounded-lg border border-cyan-500/20">
+                      <span className="text-[10px] font-mono text-cyan-400 mb-2 tracking-wider">FAM Map</span>
+                      <img 
+                        src={famImage.startsWith('data:image') ? famImage : `data:image/png;base64,${famImage}`} 
+                        alt="FAM" 
+                        className="w-full h-auto rounded object-cover border border-border/50"
+                      />
+                    </div>
+                    <div className="flex flex-col items-center bg-card/50 p-2 rounded-lg border border-purple-500/20">
+                      <span className="text-[10px] font-mono text-purple-400 mb-2 tracking-wider">Grad-CAM</span>
+                      <img 
+                        src={gradcamImage.startsWith('data:image') ? gradcamImage : `data:image/png;base64,${gradcamImage}`} 
+                        alt="Grad-CAM" 
+                        className="w-full h-auto rounded object-cover border border-border/50"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* --- AKHIR PANEL VISUALISASI --- */}
+
               {/* --- TOMBOL LAPORKAN FALSE POSITIVE --- */}
-              {/* Tombol hanya muncul jika statusnya Kuning (Suspicious) atau Merah (Manipulated) */}
               {result.verdict !== "authentic" && (
-                <div className="mt-8 pt-5 border-t border-border/50 text-center">
+                <div className="mt-6 pt-5 border-t border-border/50 text-center">
                   {!feedbackSent ? (
                     <>
                       <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
