@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Upload, Loader2, ShieldCheck, ShieldAlert, AlertTriangle, Database, Microscope, Lock } from "lucide-react";
+import { Upload, Loader2, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
 
 // Tipe data keluaran API + Sistem 3 Warna
 type Result = {
@@ -16,11 +16,6 @@ export function Detector() {
   const [result, setResult] = useState<Result | null>(null);
   const [famImage, setFamImage] = useState<string | null>(null);
   const [gradcamImage, setGradcamImage] = useState<string | null>(null);  
-  
-  // --- STATE BARU UNTUK FITUR FEEDBACK ---
-  const [showModal, setShowModal] = useState(false);
-  const [feedbackSent, setFeedbackSent] = useState(false);
-  const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
   const handleFile = async (file: File) => {
     const url = URL.createObjectURL(file);
@@ -29,17 +24,15 @@ export function Detector() {
     
     // Reset semua state saat foto baru diunggah
     setResult(null);
-    setFamImage(null);     // Ditambahkan: Reset gambar FAM lama
-    setGradcamImage(null); // Ditambahkan: Reset gambar Grad-CAM lama
-    setShowModal(false);
-    setFeedbackSent(false);
+    setFamImage(null);
+    setGradcamImage(null);
     setScanning(true);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      // PENEMBAKAN API ASLI
+      // PENEMBAKAN API
       const response = await fetch("https://tsamudra-Prosada.hf.space/predict", {
         method: "POST",
         body: formData,
@@ -49,8 +42,7 @@ export function Detector() {
       const probFake = data.fake_probability;
       const probReal = data.real_probability;
 
-      // Menangkap string Base64 gambar dari API
-      // (Mendukung key 'fam_base64' atau 'fam' tergantung output teman Anda)
+      // Menangkap string Base64 gambar XAI dari API
       if (data.images) {
         if (data.images.fam_heatmap) setFamImage(data.images.fam_heatmap);
         if (data.images.gradcam_heatmap) setGradcamImage(data.images.gradcam_heatmap);
@@ -78,15 +70,6 @@ export function Detector() {
     }
   };
 
-  // Fungsi untuk mengirim laporan (Saat ini simulasi)
-  const handleFeedbackSubmit = async () => {
-    setIsSubmittingFeedback(true);
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setIsSubmittingFeedback(false);
-    setShowModal(false);
-    setFeedbackSent(true);
-  };
-
   const getTheme = () => {
     switch (result?.verdict) {
       case "authentic": return { color: "text-emerald-500", bg: "bg-emerald-500/10", border: "border-emerald-500/40", icon: <ShieldCheck className="w-8 h-8 text-emerald-500" />, label: "Wajah Asli" };
@@ -100,71 +83,6 @@ export function Detector() {
 
   return (
     <section id="detector" className="max-w-5xl mx-auto px-6 py-24 scroll-mt-20">
-      
-      {/* --- POP-UP MODAL KONFIRMASI FEEDBACK --- */}
-      {showModal && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false) }}
-        >
-          <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="p-4 border-b border-amber-500/20 bg-amber-500/10 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full border-2 border-amber-500 text-amber-500 flex items-center justify-center font-bold">!</div>
-              <div>
-                <h4 className="text-sm font-bold text-amber-500 font-mono tracking-wide">KONFIRMASI PENGIRIMAN DATA</h4>
-                <p className="text-[10px] text-amber-500/70 uppercase tracking-wider">Membutuhkan persetujuan (Consent)</p>
-              </div>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-5 space-y-4">
-              <p className="text-sm text-foreground">
-                Dengan melaporkan ini sebagai <span className="text-amber-500 font-bold">False Positive</span>, foto yang Anda unggah akan:
-              </p>
-              
-              <div className="space-y-2">
-                <div className="flex gap-3 items-start p-3 bg-background border border-border rounded-lg">
-                  <Database className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">Disimpan secara aman ke database pelatihan model.</p>
-                </div>
-                <div className="flex gap-3 items-start p-3 bg-background border border-border rounded-lg">
-                  <Microscope className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">Dianalisis oleh tim riset ITS untuk re-training arsitektur RFM.</p>
-                </div>
-                <div className="flex gap-3 items-start p-3 bg-background border border-border rounded-lg">
-                  <Lock className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">Sesuai standar kepatuhan UU PDP dan tidak dibagikan ke publik.</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between p-3 bg-muted/50 border border-border rounded-lg mt-4">
-                <span className="text-[10px] text-muted-foreground tracking-widest uppercase">Target File</span>
-                <span className="text-xs font-mono text-primary truncate max-w-[200px]">{fileName}</span>
-              </div>
-
-              {/* Modal Buttons */}
-              <div className="flex gap-3 pt-2">
-                <button 
-                  onClick={() => setShowModal(false)} 
-                  className="flex-1 py-2.5 border border-border text-muted-foreground hover:bg-accent rounded-lg text-xs font-mono transition-colors"
-                >
-                  [ BATAL ]
-                </button>
-                <button 
-                  onClick={handleFeedbackSubmit} 
-                  disabled={isSubmittingFeedback} 
-                  className="flex-[2] py-2.5 bg-amber-500/10 border border-amber-500 text-amber-500 hover:bg-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-mono font-bold transition-colors shadow-[0_0_15px_rgba(245,158,11,0.15)]"
-                >
-                  {isSubmittingFeedback ? "[ MENGIRIM... ]" : "[ YA, KIRIM LAPORAN ]"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* --- AKHIR MODAL --- */}
-
       <div className="text-center mb-12">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-mono mb-4">
           <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
@@ -267,7 +185,7 @@ export function Detector() {
                 </div>
               </div>
 
-              {/* --- PANEL BARU: VISUALISASI XAI (FAM & GRAD-CAM) --- */}
+              {/* --- PANEL VISUALISASI XAI (FAM & GRAD-CAM) --- */}
               {famImage && gradcamImage && (
                 <div className="pt-5 border-t border-border/50">
                   <h4 className="text-[10px] font-mono text-muted-foreground tracking-widest uppercase mb-3 text-center">Analisis Visual AI (XAI)</h4>
@@ -292,31 +210,6 @@ export function Detector() {
                 </div>
               )}
               {/* --- AKHIR PANEL VISUALISASI --- */}
-
-              {/* --- TOMBOL LAPORKAN FALSE POSITIVE --- */}
-              {result.verdict !== "authentic" && (
-                <div className="mt-6 pt-5 border-t border-border/50 text-center">
-                  {!feedbackSent ? (
-                    <>
-                      <p className="text-[11px] text-muted-foreground mb-3 leading-relaxed">
-                        Merasa hasil ini keliru? (Contoh: Anda yakin ini foto asli dari kamera HP)
-                      </p>
-                      <button
-                        onClick={() => setShowModal(true)}
-                        className="px-4 py-2 text-[11px] font-mono border border-border hover:border-amber-500/50 hover:bg-amber-500/10 hover:text-amber-500 text-muted-foreground rounded-md transition-all"
-                      >
-                        [ LAPORKAN SEBAGAI FALSE POSITIVE ]
-                      </button>
-                    </>
-                  ) : (
-                    <div className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-500 rounded-md text-[11px] font-mono shadow-[0_0_10px_rgba(16,185,129,0.1)]">
-                      <ShieldCheck className="w-4 h-4" />
-                      LAPORAN TERKIRIM — MASUK ANTRIAN PELATIHAN
-                    </div>
-                  )}
-                </div>
-              )}
-              {/* --- AKHIR TOMBOL LAPORAN --- */}
 
             </div>
           )}
