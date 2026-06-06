@@ -51,8 +51,10 @@ export function Detector() {
 
       // Menangkap string Base64 gambar dari API
       // (Mendukung key 'fam_base64' atau 'fam' tergantung output teman Anda)
-      if (data.fam_base64 || data.fam) setFamImage(data.fam_base64 || data.fam);
-      if (data.gradcam_base64 || data.grad_cam) setGradcamImage(data.gradcam_base64 || data.grad_cam);
+      if (data.images) {
+        if (data.images.fam_heatmap) setFamImage(data.images.fam_heatmap);
+        if (data.images.gradcam_heatmap) setGradcamImage(data.images.gradcam_heatmap);
+      }
 
       // LOGIKA SISTEM 3 WARNA
       let currentVerdict: "authentic" | "suspicious" | "manipulated" = "authentic";
