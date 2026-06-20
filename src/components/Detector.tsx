@@ -48,11 +48,15 @@ export function Detector() {
         if (data.images.gradcam_heatmap) setGradcamImage(data.images.gradcam_heatmap);
       }
 
-      // LOGIKA SISTEM 3 WARNA
+      // LOGIKA SISTEM 3 WARNA (Disinkronkan dengan threshold Backend 0.29)
       let currentVerdict: "authentic" | "suspicious" | "manipulated" = "authentic";
-      if (probFake >= 0.75) {
+      
+      if (probFake >= 0.60) {
+        // Jika yakin di atas 60%, langsung vonis Manipulasi AI (Merah)
         currentVerdict = "manipulated";
-      } else if (probFake >= 0.40) {
+      } else if (probFake >= 0.29) {
+        // Jika di antara 29% - 59%, masuk kategori Mencurigakan (Kuning)
+        // Ini sesuai dengan threshold 0.29 dari backend
         currentVerdict = "suspicious";
       }
 
